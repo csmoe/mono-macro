@@ -28,6 +28,40 @@
 //! pub const _: *const () = (&func::<i32, i64>) as *const _ as _;
 //! fn func<T, U>(t: T, u: U) {}
 //! ```
+//!
+//! For more complicated case, use `mono_macro!` instead:
+//! ```rust
+//! trait Tr<T> {
+//!     fn foo(&self, _t: T) {}
+//! }
+//!
+//! struct Foo<'a> {
+//!     t: &'a str,
+//! }
+//!
+//! impl<'a, T> Tr<T> for Foo<'a> {
+//!     fn foo(&self, _t: T) {}
+//! }
+//!
+//! mono_macro!(<Foo<'static> as Tr<i32>>::foo);
+//! ```
+//!
+//! this will expand to:
+//! ```rust
+//! trait Tr<T> {
+//!     fn foo(&self, _t: T) {}
+//! }
+//!
+//! struct Foo<'a> {
+//!     t: &'a str,
+//! }
+//!
+//! impl<'a, T> Tr<T> for Foo<'a> {
+//!     fn foo(&self, _t: T) {}
+//! }
+//!
+//! pub const _: *const () = (&<Foo<'static> as Tr<i32>>::foo) as *const _ as _;
+//! ```
 
 use proc_macro::TokenStream;
 use quote::quote;
