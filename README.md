@@ -1,7 +1,7 @@
 Mono macro
 ==================
 
-This crate provides the `#[mono]` macro to force a generic function to be monomorphizied with give types.
+This crate provides the `#[mono]` macro to force a generic function to be monomorphizied with given types.
 
 Pair with `share-generics` mode in rustc, this can result less code, for details see https://github.com/rust-lang/rust/pull/48779.
 
@@ -14,7 +14,7 @@ mono-macro = "1.0"
 
 ## Usage
 
-Since we are monomorphizing ourselves, you are required to spell out the static dispatch handly:
+Since we are monomorphizing ourselves, you are required to spell out the static dispatch manually:
 
 In a bare function case,
 ```rust
