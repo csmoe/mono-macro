@@ -1,7 +1,7 @@
 //! Mono macro
 //! ==================
 //!
-//! This crate provides the `#[mono]` macro to force a generic function to be monomorphizied with give types.
+//! This crate provides the `#[mono]` macro to force a generic function to be monomorphizied with given types.
 //!
 //! Pair with `share-generics` mode in rustc, this can result less code, for details see <https://github.com/rust-lang/rust/pull/48779>.
 //!
@@ -14,7 +14,7 @@
 //!
 //! ## Usage
 //!
-//! Since we are monomorphizing ourselves, you are required to spell out the static dispatch handly:
+//! Since we are monomorphizing ourselves, you are required to spell out the static dispatch manually:
 //!
 //! In a bare function case,
 //! ```rust
@@ -41,8 +41,9 @@ use syn::Ident;
 use syn::ItemFn;
 use syn::Lifetime;
 use syn::Token;
+use syn::TypePath;
 
-/// Apply this macro on a generic function will cast the function pointer with given type into pointer, which forces this function to be monomorphized.
+/// Apply this macro on a generic function will cast the **bare function** pointer with given type into pointer, which forces this function to be monomorphized.
 ///
 /// # Example
 /// ```rust,no_run
@@ -59,12 +60,13 @@ use syn::Token;
 #[proc_macro_attribute]
 pub fn mono(attr: TokenStream, func: TokenStream) -> TokenStream {
     let mono_attr = parse_macro_input!(attr as TypeEqs);
+
     let input = func.clone();
     let fn_sig = parse_macro_input!(input as ItemFn).sig;
     let fn_span = fn_sig.span();
+    let func_ident = fn_sig.ident.clone();
 
     let mut params = vec![];
-    let generics_num = fn_sig.generics.params.len();
     for g in fn_sig.generics.params.into_iter() {
         if let Some(t) = mono_attr
             .eqs
@@ -84,15 +86,46 @@ pub fn mono(attr: TokenStream, func: TokenStream) -> TokenStream {
         }
     }
 
-    let func_ident = fn_sig.ident.clone();
-    let mut expand = force_monomorphize(func_ident, params);
+    let mut expand = TokenStream::from(quote! {
+        pub const _: *const () = (&#func_ident::<#(#params,)*>) as *const _ as _;
+    });
+
     expand.extend(func);
     expand
 }
 
-fn force_monomorphize(func: Ident, ident: Vec<TypeOrLifetime>) -> TokenStream {
+/// Force monomorphizing on a path of function, for the complex functions like impl methods of generic types.
+/// For example,
+/// ```rust,no_run
+/// use mono_macro::mono_macro;
+/// struct Foo<T>(T);
+/// trait Trait<K> {
+///     fn method(&self, k: K);
+/// }
+/// impl<T, K> Trait<K> for Foo<T> {
+///     fn method(&self, k: K) {}
+/// }
+///
+/// mono_macro!(<Foo<i32> as Trait<u8>>::method);
+/// ```
+///
+/// this will expand to:
+/// ```rust,no_run
+/// use mono_macro::mono_macro;
+/// struct Foo<T>(T);
+/// trait Trait<K> {
+///     fn method(&self, k: K);
+/// }
+/// impl<T, K> Trait<K> for Foo<T> {
+///     fn method(&self, k: K) {}
+/// }
+/// pub const _: *const () = (&<Foo<i32> as Trait<u8>>::method) as *const _ as _;
+/// ```
+#[proc_macro]
+pub fn mono_macro(input: TokenStream) -> TokenStream {
+    let path = parse_macro_input!(input as TypePath);
     TokenStream::from(quote! {
-        pub const _: *const () = (&#func::<#(#ident,)*>) as *const _ as _;
+        pub const _: *const () = (&#path) as *const _ as _;
     })
 }
 
