@@ -31,6 +31,7 @@
 //!
 //! For more complicated case, use `mono_macro!` instead:
 //! ```rust
+//! use mono_macro::mono_macro;
 //! trait Tr<T> {
 //!     fn foo(&self, _t: T) {}
 //! }
