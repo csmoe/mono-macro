@@ -7,7 +7,7 @@ Pair with `share-generics` mode in rustc, this can result less code, for details
 
 ```toml
 [dependencies]
-mono-macro = "1.0"
+mono-macro = "0.1"
 ```
 
 <br>
